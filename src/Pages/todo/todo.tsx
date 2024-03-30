@@ -155,7 +155,7 @@ const Todo: React.FC = () => {
         .then((response) => {
           setData([...data, response.data]);
           setIsModalAdd(false);
-          fetchData();
+          fetchDataAll();
           message.success("Todo added successfully!");
         })
         .catch((error) => {
