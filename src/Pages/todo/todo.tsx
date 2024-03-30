@@ -5,6 +5,7 @@ import {
   Breadcrumb,
   Button,
   Col,
+  DatePicker,
   Input,
   Layout,
   Menu,
@@ -21,6 +22,7 @@ import axios from "axios";
 
 const { Header, Content, Sider } = Layout;
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 const items2: MenuProps["items"] = [UserOutlined].map((icon, index) => {
   const key = String(index + 1);
@@ -52,7 +54,7 @@ const Todo: React.FC = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
-
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [data, setData] = useState<DataType[]>([]);
   const [isModalAdd, setIsModalAdd] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,22 +62,26 @@ const Todo: React.FC = () => {
   const [selectedTodo, setSelectedTodo] = useState<DataType | null>(null);
   const [status, setStatus] = useState<boolean | null>(null);
   const [todoName, setTodoName] = useState<string>("");
-  const [selectedTodoDetail, setSelectedTodoDetail] = useState<DataType | null>(null);
+  const [selectedTodoDetail, setSelectedTodoDetail] = useState<DataType | null>(
+    null
+  );
 
   function formatDate(tanggalString: string) {
-    const options: any = { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' };
+    const options: any = {
+      weekday: "long",
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+    };
     const tanggal = new Date(tanggalString);
-    const tanggalFormat = tanggal.toLocaleDateString('id-ID', options);
-    const [tanggalPart, bulanPart, tahunPart] = tanggalFormat.split('/');
-    const formattedTanggal = `${tanggalPart}-${bulanPart.padStart(2, '0')}-${tahunPart}`;
+    const tanggalFormat = tanggal.toLocaleDateString("id-ID", options);
+    const [tanggalPart, bulanPart, tahunPart] = tanggalFormat.split("/");
+    const formattedTanggal = `${tanggalPart}-${bulanPart.padStart(
+      2,
+      "0"
+    )}-${tahunPart}`;
     return formattedTanggal;
-}
-
-  const showModal = (record: DataType) => {
-    setSelectedTodo(record);
-    setIsModalOpen(true);
-    setIsModalDetail(true);
-  };
+  }
 
   const handleCancel = () => {
     setIsModalOpen(false);
@@ -87,8 +93,22 @@ const Todo: React.FC = () => {
     setStatus(value);
   };
 
-  const fetchData = async () => {
+  const fetchDataAll = async () => {
     const url = "https://calm-plum-jaguar-tutu.cyclic.app/todos";
+    try {
+      const response = await axios.get(url);
+      setData(response.data.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  const fetchData = async () => {
+    let url = "https://calm-plum-jaguar-tutu.cyclic.app/todos";
+    if (dateRange) {
+      const [startDate, endDate] = dateRange;
+      url = `https://calm-plum-jaguar-tutu.cyclic.app/todos/from/${startDate}/to/${endDate}`;
+    }
     try {
       const response = await axios.get(url);
       setData(response.data.data);
@@ -143,6 +163,11 @@ const Todo: React.FC = () => {
     }
   };
 
+  const showModalEdit = (record: DataType) => {
+    setSelectedTodo(record);
+    setIsModalOpen(true);
+  };
+
   const handleEdit = () => {
     if (selectedTodo && status !== null) {
       const url = `https://calm-plum-jaguar-tutu.cyclic.app/todos/${selectedTodo._id}`;
@@ -192,7 +217,12 @@ const Todo: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    fetchDataAll();
+  }, [dateRange]);
+
+  const handleDateRangeChange = (dates: any, dateStrings: [string, string]) => {
+    setDateRange(dateStrings);
+  };
 
   const columns: TableProps<DataType>["columns"] = [
     {
@@ -202,7 +232,7 @@ const Todo: React.FC = () => {
       render: (text: string) => <a>{text}</a>,
     },
     {
-      title: "Create",
+      title: "Created",
       dataIndex: "createdAt",
       key: "createdAt",
       render: (text: string) => <span>{formatDate(text)}</span>,
@@ -225,7 +255,7 @@ const Todo: React.FC = () => {
           <a style={{ color: "green" }} onClick={() => showDetailModal(record)}>
             Detail
           </a>
-          <a style={{ color: "blue" }} onClick={() => showModal(record)}>
+          <a style={{ color: "blue" }} onClick={() => showModalEdit(record)}>
             Edit
           </a>
           <a style={{ color: "red" }} onClick={() => handleDelete(record._id)}>
@@ -281,6 +311,12 @@ const Todo: React.FC = () => {
                 </Button>
               </Col>
             </Row>
+            <Row style={{ marginBottom: 16 }}>
+              <Col>
+                <h1 style={{ fontWeight: "bold" }}>Filter</h1>
+                <RangePicker onChange={handleDateRangeChange} />
+              </Col>
+            </Row>
             <Table columns={columns} dataSource={data} />
           </Content>
         </Layout>
@@ -328,7 +364,7 @@ const Todo: React.FC = () => {
       </Modal>
       <Modal
         title="Detail"
-        visible={isModalDetail}
+        open={isModalDetail}
         onOk={handleCancel}
         onCancel={handleCancel}
       >
@@ -343,10 +379,10 @@ const Todo: React.FC = () => {
         <Input
           style={{ width: "100%", marginTop: "6px" }}
           placeholder="Enter Todo Name"
-          value={selectedTodoDetail?.createdAt}
+          value={selectedTodoDetail ? formatDate(selectedTodoDetail.createdAt) : ""}
           readOnly
         />
-       <h2 className="mt-2">Status Todo</h2>
+        <h2 className="mt-2">Status Todo</h2>
         <Select
           style={{ width: "100%", marginTop: "6px" }}
           placeholder="Select Status"
