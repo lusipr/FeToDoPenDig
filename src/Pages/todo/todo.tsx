@@ -44,6 +44,8 @@ interface DataType {
   _id: string;
   todoName: string;
   isComplete: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const Todo: React.FC = () => {
@@ -54,18 +56,31 @@ const Todo: React.FC = () => {
   const [data, setData] = useState<DataType[]>([]);
   const [isModalAdd, setIsModalAdd] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalDetail, setIsModalDetail] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<DataType | null>(null);
   const [status, setStatus] = useState<boolean | null>(null);
   const [todoName, setTodoName] = useState<string>("");
+  const [selectedTodoDetail, setSelectedTodoDetail] = useState<DataType | null>(null);
+
+  function formatDate(tanggalString: string) {
+    const options: any = { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' };
+    const tanggal = new Date(tanggalString);
+    const tanggalFormat = tanggal.toLocaleDateString('id-ID', options);
+    const [tanggalPart, bulanPart, tahunPart] = tanggalFormat.split('/');
+    const formattedTanggal = `${tanggalPart}-${bulanPart.padStart(2, '0')}-${tahunPart}`;
+    return formattedTanggal;
+}
 
   const showModal = (record: DataType) => {
     setSelectedTodo(record);
     setIsModalOpen(true);
+    setIsModalDetail(true);
   };
 
   const handleCancel = () => {
     setIsModalOpen(false);
     setIsModalAdd(false);
+    setIsModalDetail(false);
   };
 
   const handleStatusChange = (value: boolean) => {
@@ -79,6 +94,29 @@ const Todo: React.FC = () => {
       setData(response.data.data);
     } catch (error) {
       console.error("Error fetching data:", error);
+    }
+  };
+
+  const fetchTodoDetail = async (id: string) => {
+    const url = `https://calm-plum-jaguar-tutu.cyclic.app/todos/${id}`;
+    try {
+      const response = await axios.get(url);
+      return response.data.data; // Mengembalikan data detail tugas dari respons API
+    } catch (error) {
+      console.error("Error fetching todo detail:", error);
+      return null;
+    }
+  };
+
+  const showDetailModal = async (record: DataType) => {
+    setSelectedTodo(record);
+    setIsModalDetail(true);
+    const todoDetail = await fetchTodoDetail(record._id);
+    if (todoDetail) {
+      console.log("Todo Detail:", todoDetail);
+      setSelectedTodoDetail(todoDetail);
+    } else {
+      console.error("Failed to fetch todo detail.");
     }
   };
 
@@ -164,6 +202,12 @@ const Todo: React.FC = () => {
       render: (text: string) => <a>{text}</a>,
     },
     {
+      title: "Create",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (text: string) => <span>{formatDate(text)}</span>,
+    },
+    {
       title: "Status",
       dataIndex: "isComplete",
       key: "isComplete",
@@ -178,6 +222,9 @@ const Todo: React.FC = () => {
       key: "action",
       render: (_, record: DataType) => (
         <Space size="middle">
+          <a style={{ color: "green" }} onClick={() => showDetailModal(record)}>
+            Detail
+          </a>
           <a style={{ color: "blue" }} onClick={() => showModal(record)}>
             Edit
           </a>
@@ -274,6 +321,38 @@ const Todo: React.FC = () => {
           placeholder="Select Status"
           onChange={handleStatusChange}
           value={status}
+        >
+          <Option value={true}>Completed</Option>
+          <Option value={false}>Incompleted</Option>
+        </Select>
+      </Modal>
+      <Modal
+        title="Detail"
+        visible={isModalDetail}
+        onOk={handleCancel}
+        onCancel={handleCancel}
+      >
+        <h2>Nama Todo</h2>
+        <Input
+          style={{ width: "100%", marginTop: "6px" }}
+          placeholder="Enter Todo Name"
+          value={selectedTodoDetail?.todoName}
+          readOnly
+        />
+        <h2 className="mt-2">Create Todo</h2>
+        <Input
+          style={{ width: "100%", marginTop: "6px" }}
+          placeholder="Enter Todo Name"
+          value={selectedTodoDetail?.createdAt}
+          readOnly
+        />
+       <h2 className="mt-2">Status Todo</h2>
+        <Select
+          style={{ width: "100%", marginTop: "6px" }}
+          placeholder="Select Status"
+          onChange={handleStatusChange}
+          value={selectedTodoDetail?.isComplete}
+          disabled
         >
           <Option value={true}>Completed</Option>
           <Option value={false}>Incompleted</Option>
