@@ -65,6 +65,7 @@ const Todo: React.FC = () => {
   const [selectedTodoDetail, setSelectedTodoDetail] = useState<DataType | null>(
     null
   );
+  
 
   function formatDate(tanggalString: string) {
     const options: any = {
@@ -220,7 +221,7 @@ const Todo: React.FC = () => {
     fetchDataAll();
   }, [dateRange]);
 
-  const handleDateRangeChange = (dates: any, dateStrings: [string, string]) => {
+  const handleDateRangeChange = (_: any, dateStrings: [string, string]) => {
     setDateRange(dateStrings);
   };
 
